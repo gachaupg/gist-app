@@ -7,11 +7,6 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { gistSchema } from "@/lib/validations";
 
-// Define error interface
-interface ApiError extends Error {
-  message: string;
-}
-
 type GistFormValues = {
   filename: string;
   description: string;
@@ -60,7 +55,7 @@ export default function NewGistPage() {
       // Redirect to the gists page on success
       router.push("/gists");
       router.refresh();
-    } catch (err: ApiError) {
+    } catch (err: any) {
       console.error("Error creating gist:", err);
       setError(err.message || "Failed to create gist. Please try again.");
     } finally {

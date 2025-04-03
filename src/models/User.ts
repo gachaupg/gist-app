@@ -15,12 +15,6 @@ export interface IUser extends Document {
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
-// Add error interface
-interface BcryptError extends Error {
-  code?: string | number;
-  message: string;
-}
-
 // Define User Schema
 const UserSchema = new Schema<IUser>(
   {
@@ -74,7 +68,7 @@ UserSchema.pre("save", async function (next) {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
     return next();
-  } catch (error: BcryptError) {
+  } catch (error: any) {
     return next(error);
   }
 });

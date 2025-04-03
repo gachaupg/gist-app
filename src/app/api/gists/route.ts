@@ -6,12 +6,6 @@ import dbConnect from "@/lib/db";
 import User from "@/models/User";
 import { createGitHubClient } from "@/lib/github";
 
-// Define error interface
-interface GitHubApiError extends Error {
-  status?: number;
-  message: string;
-}
-
 // Zod schema for gist creation
 const gistSchema = z.object({
   filename: z.string().min(1, "Filename is required"),
@@ -58,7 +52,7 @@ export async function GET(req: NextRequest) {
     const gists = await github.listGists(per_page, page);
 
     return NextResponse.json(gists);
-  } catch (error: GitHubApiError) {
+  } catch (error: any) {
     console.error("Error fetching gists:", error);
 
     // Handle GitHub API errors
@@ -135,7 +129,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(newGist, { status: 201 });
-  } catch (error: GitHubApiError) {
+  } catch (error: any) {
     console.error("Error creating gist:", error);
 
     // Handle GitHub API errors

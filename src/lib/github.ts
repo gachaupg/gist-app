@@ -22,12 +22,6 @@ export interface GistUpdateInput {
   };
 }
 
-// Add GitHubApiError interface
-interface GitHubApiError extends Error {
-  status?: number;
-  message: string;
-}
-
 // GitHub API client class
 export class GitHubClient {
   private octokit: Octokit;
@@ -124,7 +118,7 @@ export class GitHubClient {
     try {
       const response = await this.octokit.request(`GET /gists/${gistId}/star`);
       return response.status === 204; // 204 No Content means it's starred
-    } catch (error: GitHubApiError) {
+    } catch (error: any) {
       if (error.status === 404) {
         return false; // 404 means it's not starred
       }

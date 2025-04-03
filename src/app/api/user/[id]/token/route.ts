@@ -5,17 +5,6 @@ import User from "@/models/User";
 import { authOptions } from "@/lib/auth";
 import { GitHubClient } from "@/lib/github";
 
-// Define error interfaces
-interface DatabaseError extends Error {
-  code?: number | string;
-  message: string;
-}
-
-interface GitHubApiError extends Error {
-  status?: number;
-  message: string;
-}
-
 export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -49,7 +38,7 @@ export async function PUT(
     try {
       const github = new GitHubClient(githubToken);
       await github.listGists(1, 1); // Test the token with a minimal request
-    } catch (err: GitHubApiError) {
+    } catch (err: any) {
       console.error("GitHub token validation error:", err);
       return NextResponse.json(
         {
@@ -73,7 +62,7 @@ export async function PUT(
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: DatabaseError) {
+  } catch (error: any) {
     console.error("Error updating GitHub token:", error);
     return NextResponse.json(
       { error: "Internal server error" },

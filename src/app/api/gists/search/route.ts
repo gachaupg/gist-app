@@ -5,12 +5,6 @@ import dbConnect from "@/lib/db";
 import User from "@/models/User";
 import { Octokit } from "octokit";
 
-// Define error interface
-interface GitHubApiError extends Error {
-  status?: number;
-  message: string;
-}
-
 // GET /api/gists/search - Search gists
 export async function GET(req: NextRequest) {
   try {
@@ -142,7 +136,7 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json(finalFilteredGists);
-  } catch (error: GitHubApiError) {
+  } catch (error: any) {
     console.error("Error searching gists:", error);
 
     // Handle GitHub API errors

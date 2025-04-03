@@ -3,12 +3,6 @@ import dbConnect from "@/lib/db";
 import User from "@/models/User";
 import { registerSchema } from "@/lib/validations";
 
-// Define error interface
-interface DatabaseError extends Error {
-  code?: number | string;
-  message: string;
-}
-
 export async function POST(req: NextRequest) {
   try {
     // Parse request body
@@ -54,7 +48,7 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: DatabaseError) {
+  } catch (error: any) {
     console.error("Registration error:", error);
     return NextResponse.json(
       { error: "Internal server error" },

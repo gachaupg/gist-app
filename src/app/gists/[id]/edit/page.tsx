@@ -8,11 +8,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from "next/link";
 
-// Define error interface
-interface ApiError extends Error {
-  message: string;
-}
-
 // Edit gist schema
 const editGistSchema = z.object({
   filename: z.string().min(1, "Filename is required"),
@@ -126,7 +121,7 @@ export default function EditGistPage({ params }: { params: { id: string } }) {
       // Redirect to the gist page on success
       router.push(`/gists/${params.id}`);
       router.refresh();
-    } catch (err: ApiError) {
+    } catch (err: any) {
       console.error("Error updating gist:", err);
       setError(err.message || "Failed to update gist. Please try again.");
     } finally {

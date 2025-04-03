@@ -21,11 +21,6 @@ interface UserData {
   hasGithubToken: boolean;
 }
 
-// Define error interface
-interface ApiError extends Error {
-  message: string;
-}
-
 type ProfileFormValues = {
   name: string;
   bio: string;
@@ -139,7 +134,7 @@ export default function ProfilePage() {
       const updatedUser = await response.json();
       setUserData(updatedUser);
       setSuccess("Profile updated successfully");
-    } catch (err: ApiError) {
+    } catch (err: any) {
       console.error("Error updating profile:", err);
       setError(err.message || "An error occurred while updating your profile");
     } finally {
@@ -170,7 +165,7 @@ export default function ProfilePage() {
       }
 
       setSuccess("GitHub token updated successfully");
-    } catch (err: ApiError) {
+    } catch (err: any) {
       console.error("Error updating GitHub token:", err);
       setError(
         err.message || "An error occurred while updating your GitHub token"
@@ -199,7 +194,7 @@ export default function ProfilePage() {
 
       // Sign out and redirect to home page
       router.push("/api/auth/signout");
-    } catch (err: ApiError) {
+    } catch (err: any) {
       console.error("Error deleting account:", err);
       setError(err.message || "An error occurred while deleting your account");
       setLoading(false);

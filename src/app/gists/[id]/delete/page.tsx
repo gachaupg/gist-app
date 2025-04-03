@@ -20,10 +20,6 @@ interface Gist {
   public: boolean;
 }
 
-interface ApiError extends Error {
-  message: string;
-}
-
 export default function DeleteGistPage({ params }: { params: { id: string } }) {
   // Using status only from useSession since data is unused
   const { status } = useSession();
@@ -82,7 +78,7 @@ export default function DeleteGistPage({ params }: { params: { id: string } }) {
       // Redirect to gists page on success
       router.push("/gists");
       router.refresh();
-    } catch (err: ApiError) {
+    } catch (err: any) {
       console.error("Error deleting gist:", err);
       setError(err.message || "Failed to delete gist. Please try again.");
       setDeleting(false);
