@@ -42,7 +42,7 @@ export default function Home() {
     const fetchGists = async () => {
       try {
         setLoading(true);
-        
+
         // Use the public-gists endpoint instead of the regular gists endpoint
         // This will work without requiring a GitHub token
         const response = await fetch("/api/public-gists?per_page=30&page=1");
