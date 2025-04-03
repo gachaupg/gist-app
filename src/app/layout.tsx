@@ -4,7 +4,10 @@ import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import Navbar from "@/components/Navbar";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
 
 export const metadata: Metadata = {
   title: "GitHub Gist Tracker",
@@ -18,15 +21,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} bg-gray-50`}>
         <AuthProvider>
           <div className="min-h-screen flex flex-col">
             <Navbar />
-            <main className="flex-grow container mx-auto px-4 py-8">
-              {children}
-            </main>
-            <footer className="bg-gray-100 py-6">
-              <div className="container mx-auto px-4 text-center text-gray-500">
+            <main className="flex-grow py-4">{children}</main>
+            <footer className="border-t border-gray-200 py-4 mt-8">
+              <div className="container mx-auto px-4 text-center text-gray-400 text-xs">
                 <p>
                   © {new Date().getFullYear()} GitHub Gist Tracker. All rights
                   reserved.

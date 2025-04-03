@@ -43,35 +43,42 @@ export default function GistClient({ id }: GistClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [starred, setStarred] = useState(false);
   const [isStarring, setIsStarring] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
-  }, [status, router]);
-
-  // Fetch gist
+  // Fetch gist - we don't require authentication to view gists
   useEffect(() => {
     const fetchGist = async () => {
-      if (status !== "authenticated") return;
-
       try {
         setLoading(true);
-        const response = await fetch(`/api/gists/${id}`);
+
+        // Use the public endpoint to get the gist - this works without authentication
+        const response = await fetch(`/api/public-gists/${id}`);
 
         if (!response.ok) {
-          throw new Error("Failed to fetch gist");
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to fetch gist");
         }
 
         const data = await response.json();
         setGist(data);
 
-        // Check if gist is starred
-        const starResponse = await fetch(`/api/gists/${id}/star`);
-        if (starResponse.ok) {
-          const starData = await starResponse.json();
-          setStarred(starData.starred);
+        // Check if the current user is the owner of the gist
+        if (session?.user?.name && data.owner.login === session.user.name) {
+          setIsOwner(true);
+        }
+
+        // Only check star status if authenticated
+        if (status === "authenticated") {
+          try {
+            const starResponse = await fetch(`/api/gists/${id}/star`);
+            if (starResponse.ok) {
+              const starData = await starResponse.json();
+              setStarred(starData.starred);
+            }
+          } catch (starErr) {
+            console.error("Error checking star status:", starErr);
+            // Non-critical error, don't show to user
+          }
         }
       } catch (err) {
         console.error("Error fetching gist:", err);
@@ -82,7 +89,7 @@ export default function GistClient({ id }: GistClientProps) {
     };
 
     fetchGist();
-  }, [id, status]);
+  }, [id, status, session]);
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -96,9 +103,15 @@ export default function GistClient({ id }: GistClientProps) {
     });
   };
 
-  // Handle star/unstar
+  // Handle star/unstar - requires authentication
   const handleToggleStar = async () => {
-    if (!gist) return;
+    if (!gist || status !== "authenticated") {
+      // If not authenticated, redirect to login
+      if (status !== "authenticated") {
+        router.push("/login");
+      }
+      return;
+    }
 
     try {
       setIsStarring(true);
@@ -108,6 +121,14 @@ export default function GistClient({ id }: GistClientProps) {
       });
 
       if (!response.ok) {
+        const errorData = await response.json();
+        if (
+          errorData.error &&
+          errorData.error.includes("GitHub token not found")
+        ) {
+          router.push("/profile");
+          return;
+        }
         throw new Error(`Failed to ${starred ? "unstar" : "star"} gist`);
       }
 
@@ -122,7 +143,7 @@ export default function GistClient({ id }: GistClientProps) {
     }
   };
 
-  if (status === "loading" || loading) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
@@ -136,7 +157,7 @@ export default function GistClient({ id }: GistClientProps) {
         <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded mb-4">
           {error}
         </div>
-        <Link href="/gists" className="text-indigo-600 hover:text-indigo-800">
+        <Link href="/" className="text-indigo-600 hover:text-indigo-800">
           Back to Gists
         </Link>
       </div>
@@ -149,7 +170,7 @@ export default function GistClient({ id }: GistClientProps) {
         <div className="bg-yellow-100 border border-yellow-300 text-yellow-700 px-4 py-3 rounded mb-4">
           Gist not found
         </div>
-        <Link href="/gists" className="text-indigo-600 hover:text-indigo-800">
+        <Link href="/" className="text-indigo-600 hover:text-indigo-800">
           Back to Gists
         </Link>
       </div>
@@ -162,7 +183,7 @@ export default function GistClient({ id }: GistClientProps) {
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
           <Link
-            href="/gists"
+            href="/"
             className="text-indigo-600 hover:text-indigo-800 mb-2 inline-block"
           >
             ← Back to Gists
@@ -177,36 +198,48 @@ export default function GistClient({ id }: GistClientProps) {
                 ` • Updated ${formatDate(gist.updated_at)}`}
             </span>
           </div>
+          <div className="mt-2 flex items-center">
+            <img
+              src={gist.owner.avatar_url}
+              alt={gist.owner.login}
+              className="w-5 h-5 rounded-full mr-2"
+            />
+            <span className="text-sm text-indigo-600">
+              {gist.owner.login} {isOwner && "(You)"}
+            </span>
+          </div>
         </div>
 
         <div className="flex mt-4 md:mt-0 space-x-2">
-          <button
-            onClick={handleToggleStar}
-            disabled={isStarring}
-            className={`px-3 py-1 rounded-md flex items-center ${
-              starred
-                ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-            }`}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className={`h-5 w-5 mr-1 ${
-                starred ? "text-yellow-500" : "text-gray-400"
+          {status === "authenticated" && (
+            <button
+              onClick={handleToggleStar}
+              disabled={isStarring}
+              className={`px-3 py-1 rounded-md flex items-center ${
+                starred
+                  ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                  : "bg-gray-100 text-gray-800 hover:bg-gray-200"
               }`}
-              viewBox="0 0 20 20"
-              fill="currentColor"
             >
-              <path
-                fillRule="evenodd"
-                d="M10 1L12.5 6.5L19 7.5L14.5 12L15.5 19L10 15.5L4.5 19L5.5 12L1 7.5L7.5 6.5L10 1Z"
-                clipRule="evenodd"
-              />
-            </svg>
-            {starred ? "Starred" : "Star"}
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`h-5 w-5 mr-1 ${
+                  starred ? "text-yellow-500" : "text-gray-400"
+                }`}
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 1L12.5 6.5L19 7.5L14.5 12L15.5 19L10 15.5L4.5 19L5.5 12L1 7.5L7.5 6.5L10 1Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {starred ? "Starred" : "Star"}
+            </button>
+          )}
 
-          {gist.owner.login === session?.user?.name && (
+          {isOwner && (
             <>
               <Link
                 href={`/gists/${gist.id}/edit`}
@@ -221,6 +254,15 @@ export default function GistClient({ id }: GistClientProps) {
                 Delete
               </Link>
             </>
+          )}
+
+          {status === "unauthenticated" && (
+            <div className="px-3 py-1 bg-indigo-50 text-indigo-800 rounded-md text-sm">
+              <Link href="/login" className="font-medium hover:underline">
+                Sign in
+              </Link>
+              {" to star this gist"}
+            </div>
           )}
         </div>
       </div>
@@ -237,7 +279,7 @@ export default function GistClient({ id }: GistClientProps) {
         {Object.entries(gist.files).map(([filename, file]) => (
           <div
             key={filename}
-            className="bg-white border border-gray-200 rounded-md overflow-hidden"
+            className="bg-white border border-gray-200 rounded-md overflow-hidden shadow-sm mb-6"
           >
             <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 flex justify-between items-center">
               <div className="font-medium">{filename}</div>
@@ -245,12 +287,47 @@ export default function GistClient({ id }: GistClientProps) {
                 {file.language || "Plain Text"}
               </div>
             </div>
-            <pre className="p-4 overflow-x-auto bg-gray-800 text-gray-200 text-sm">
+            <pre className="p-6 overflow-x-auto bg-gray-800 text-gray-200 text-sm">
               <code>{file.content}</code>
             </pre>
           </div>
         ))}
       </div>
+
+      {/* Not Owner Warning */}
+      {status === "authenticated" && !isOwner && (
+        <div className="mt-8 bg-indigo-50 border border-indigo-100 rounded-md p-4">
+          <p className="text-indigo-800 text-sm">
+            This gist was created by <strong>{gist.owner.login}</strong>. You
+            can view and star it, but only the owner can edit or delete it.
+          </p>
+          <Link
+            href="/gists/new"
+            className="mt-2 inline-block text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+          >
+            Create your own gist →
+          </Link>
+        </div>
+      )}
+
+      {/* Unauthenticated User Message */}
+      {status === "unauthenticated" && (
+        <div className="mt-8 bg-indigo-50 border border-indigo-100 rounded-md p-4">
+          <p className="text-indigo-800 text-sm">
+            <Link href="/login" className="font-medium hover:underline">
+              Sign in
+            </Link>{" "}
+            to create, edit, and star gists.
+          </p>
+          <p className="mt-1 text-indigo-700 text-sm">
+            Don't have an account?{" "}
+            <Link href="/register" className="font-medium hover:underline">
+              Register
+            </Link>{" "}
+            to get started.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

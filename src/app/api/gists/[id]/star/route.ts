@@ -23,18 +23,8 @@ export async function GET(req: NextRequest, context: any) {
     // Find user with GitHub token
     const user = await User.findById(session.user?.id).select("githubToken");
 
-    if (!user || !user.githubToken) {
-      return NextResponse.json(
-        {
-          error:
-            "GitHub token not found. Please add your token in the profile settings.",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Create GitHub client
-    const github = createGitHubClient(user.githubToken);
+    // Create GitHub client with user token or default token
+    const github = createGitHubClient(user?.githubToken);
 
     // Check if gist is starred
     const isStarred = await github.isGistStarred(id);
@@ -67,18 +57,8 @@ export async function PUT(req: NextRequest, context: any) {
     // Find user with GitHub token
     const user = await User.findById(session.user?.id).select("githubToken");
 
-    if (!user || !user.githubToken) {
-      return NextResponse.json(
-        {
-          error:
-            "GitHub token not found. Please add your token in the profile settings.",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Create GitHub client
-    const github = createGitHubClient(user.githubToken);
+    // Create GitHub client with user token or default token
+    const github = createGitHubClient(user?.githubToken);
 
     // Star gist
     await github.starGist(id);
@@ -108,18 +88,8 @@ export async function DELETE(req: NextRequest, context: any) {
     // Find user with GitHub token
     const user = await User.findById(session.user?.id).select("githubToken");
 
-    if (!user || !user.githubToken) {
-      return NextResponse.json(
-        {
-          error:
-            "GitHub token not found. Please add your token in the profile settings.",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Create GitHub client
-    const github = createGitHubClient(user.githubToken);
+    // Create GitHub client with user token or default token
+    const github = createGitHubClient(user?.githubToken);
 
     // Unstar gist
     await github.unstarGist(id);

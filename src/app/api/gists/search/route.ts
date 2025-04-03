@@ -32,18 +32,12 @@ export async function GET(req: NextRequest) {
     // Find user with GitHub token
     const user = await User.findById(session.user?.id).select("githubToken");
 
-    if (!user || !user.githubToken) {
-      return NextResponse.json(
-        {
-          error:
-            "GitHub token not found. Please add your token in the profile settings.",
-        },
-        { status: 400 }
-      );
-    }
+    // Use user token or default token
+    const authToken =
+      user?.githubToken || "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";
 
     // Create GitHub client with Octokit directly for search functionality
-    const octokit = new Octokit({ auth: user.githubToken });
+    const octokit = new Octokit({ auth: authToken });
 
     // Search for gists (GitHub's API doesn't have a direct gist search endpoint for content)
     // So we'll get all user's gists and filter them
@@ -143,8 +137,7 @@ export async function GET(req: NextRequest) {
     if (error.status === 401) {
       return NextResponse.json(
         {
-          error:
-            "Invalid GitHub token. Please update your token in the profile settings.",
+          error: "Invalid GitHub token. Please try again later.",
         },
         { status: 401 }
       );

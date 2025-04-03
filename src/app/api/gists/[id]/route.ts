@@ -23,17 +23,17 @@ export async function GET(request: NextRequest, context: any) {
     // Find user with GitHub token
     const user = await User.findById(session.user?.id).select("githubToken");
 
-    if (!user || !user.githubToken) {
+    if (!user?.githubToken) {
       return NextResponse.json(
         {
           error:
-            "GitHub token not found. Please add your token in the profile settings.",
+            "GitHub token not found. Please add your token in the profile page.",
         },
         { status: 400 }
       );
     }
 
-    // Create GitHub client
+    // Create GitHub client with user token
     const github = createGitHubClient(user.githubToken);
 
     // Fetch gist from GitHub API
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest, context: any) {
       return NextResponse.json(
         {
           error:
-            "Invalid GitHub token. Please update your token in the profile settings.",
+            "Invalid GitHub token. Please update your token in the profile page.",
         },
         { status: 401 }
       );
@@ -86,27 +86,47 @@ export async function PATCH(request: NextRequest, context: any) {
     // Find user with GitHub token
     const user = await User.findById(session.user?.id).select("githubToken");
 
-    if (!user || !user.githubToken) {
+    if (!user?.githubToken) {
       return NextResponse.json(
         {
           error:
-            "GitHub token not found. Please add your token in the profile settings.",
+            "GitHub token not found. Please add your token in the profile page.",
         },
         { status: 400 }
       );
     }
 
-    // Create GitHub client
+    // Create GitHub client with user token
     const github = createGitHubClient(user.githubToken);
 
-    // Update gist on GitHub
-    const updatedGist = await github.updateGist({
-      gist_id: id,
-      description: body.description,
-      files: body.files,
-    });
+    // First, check if the user is the owner of the gist
+    try {
+      const gist = await github.getGist(id);
 
-    return NextResponse.json(updatedGist);
+      // Verify ownership - only allow updates to user's own gists
+      if (gist.owner.login !== session.user?.name) {
+        return NextResponse.json(
+          { error: "You can only edit your own gists" },
+          { status: 403 }
+        );
+      }
+
+      // Update gist on GitHub
+      const updatedGist = await github.updateGist({
+        gist_id: id,
+        description: body.description,
+        files: body.files,
+      });
+
+      return NextResponse.json(updatedGist);
+    } catch (error: any) {
+      // Check if the error is a not found error
+      if (error.status === 404) {
+        return NextResponse.json({ error: "Gist not found" }, { status: 404 });
+      }
+
+      throw error; // Re-throw for the main catch block
+    }
   } catch (error: any) {
     console.error(`Error updating gist:`, error);
 
@@ -119,7 +139,7 @@ export async function PATCH(request: NextRequest, context: any) {
       return NextResponse.json(
         {
           error:
-            "Invalid GitHub token. Please update your token in the profile settings.",
+            "Invalid GitHub token. Please update your token in the profile page.",
         },
         { status: 401 }
       );
@@ -150,23 +170,43 @@ export async function DELETE(request: NextRequest, context: any) {
     // Find user with GitHub token
     const user = await User.findById(session.user?.id).select("githubToken");
 
-    if (!user || !user.githubToken) {
+    if (!user?.githubToken) {
       return NextResponse.json(
         {
           error:
-            "GitHub token not found. Please add your token in the profile settings.",
+            "GitHub token not found. Please add your token in the profile page.",
         },
         { status: 400 }
       );
     }
 
-    // Create GitHub client
+    // Create GitHub client with user token
     const github = createGitHubClient(user.githubToken);
 
-    // Delete gist on GitHub
-    await github.deleteGist(id);
+    // First, check if the user is the owner of the gist
+    try {
+      const gist = await github.getGist(id);
 
-    return NextResponse.json({ success: true });
+      // Verify ownership - only allow deletion of user's own gists
+      if (gist.owner.login !== session.user?.name) {
+        return NextResponse.json(
+          { error: "You can only delete your own gists" },
+          { status: 403 }
+        );
+      }
+
+      // Delete gist on GitHub
+      await github.deleteGist(id);
+
+      return NextResponse.json({ success: true });
+    } catch (error: any) {
+      // Check if the error is a not found error
+      if (error.status === 404) {
+        return NextResponse.json({ error: "Gist not found" }, { status: 404 });
+      }
+
+      throw error; // Re-throw for the main catch block
+    }
   } catch (error: any) {
     console.error(`Error deleting gist:`, error);
 
@@ -179,7 +219,7 @@ export async function DELETE(request: NextRequest, context: any) {
       return NextResponse.json(
         {
           error:
-            "Invalid GitHub token. Please update your token in the profile settings.",
+            "Invalid GitHub token. Please update your token in the profile page.",
         },
         { status: 401 }
       );

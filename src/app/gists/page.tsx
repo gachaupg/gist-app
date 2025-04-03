@@ -31,12 +31,12 @@ interface Gist {
 }
 
 export default function GistsPage() {
-  // Using only status since session data is unused
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [gists, setGists] = useState<Gist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasToken, setHasToken] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -65,13 +65,23 @@ export default function GistsPage() {
             errorData.error &&
             errorData.error.includes("GitHub token not found")
           ) {
-            // Redirect to profile page if GitHub token is missing
-            setError("GitHub token not found. Redirecting to profile page...");
-            setTimeout(() => {
-              router.push("/profile");
-            }, 2000);
+            // Set hasToken to false to show token missing message
+            setHasToken(false);
+            setLoading(false);
             return;
           }
+
+          if (
+            errorData.error &&
+            errorData.error.includes("Invalid GitHub token")
+          ) {
+            // Token is invalid
+            setHasToken(false);
+            setError(errorData.error);
+            setLoading(false);
+            return;
+          }
+
           throw new Error(errorData.error || "Failed to fetch gists");
         }
 
@@ -123,13 +133,12 @@ export default function GistsPage() {
           errorData.error &&
           errorData.error.includes("GitHub token not found")
         ) {
-          // Redirect to profile page if GitHub token is missing
-          setError("GitHub token not found. Redirecting to profile page...");
-          setTimeout(() => {
-            router.push("/profile");
-          }, 2000);
+          // Set hasToken to false to show token missing message
+          setHasToken(false);
+          setLoading(false);
           return;
         }
+
         throw new Error(errorData.error || "Search failed");
       }
 
@@ -188,58 +197,125 @@ export default function GistsPage() {
 
   if (status === "loading") {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      <div className="flex justify-center items-center min-h-[40vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+
+  // Show GitHub token missing message
+  if (!hasToken) {
+    return (
+      <div className="container mx-auto px-4 max-w-5xl">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-5">
+          <h1 className="text-xl font-semibold text-gray-800 mb-3 md:mb-0">
+            My Gists
+          </h1>
+        </div>
+
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-yellow-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-yellow-800">
+                GitHub Token Required
+              </h3>
+              <div className="mt-2 text-sm text-yellow-700">
+                <p>
+                  You need to add your GitHub Personal Access Token to view and
+                  manage your gists. This token is required to authenticate with
+                  GitHub's API and access your personal gists.
+                </p>
+                <p className="mt-2">
+                  <strong>Important:</strong> The token should have the{" "}
+                  <code className="bg-yellow-100 px-1 py-0.5 rounded">
+                    gist
+                  </code>{" "}
+                  scope enabled.
+                </p>
+                <div className="mt-4">
+                  <Link
+                    href="/profile"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Go to Profile Settings
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-medium text-gray-900 mb-4">
+            How to Create a GitHub Personal Access Token
+          </h2>
+          <ol className="list-decimal list-inside space-y-2 text-gray-700">
+            <li>Go to your GitHub account settings</li>
+            <li>Click on "Developer settings" in the sidebar</li>
+            <li>Select "Personal access tokens" and then "Tokens (classic)"</li>
+            <li>Click "Generate new token" and confirm your password</li>
+            <li>Give your token a description (e.g., "Gist Tracker App")</li>
+            <li>
+              Select the <strong>gist</strong> scope
+            </li>
+            <li>Click "Generate token" at the bottom of the page</li>
+            <li>Copy the generated token (you'll only see it once!)</li>
+            <li>Paste the token in your profile settings</li>
+          </ol>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-4 md:mb-0">
+    <div className="container mx-auto px-4 max-w-5xl">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-5">
+        <h1 className="text-xl font-semibold text-gray-800 mb-3 md:mb-0">
           My Gists
         </h1>
 
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Link
             href="/gists/new"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-center"
+            className="px-3 py-1.5 bg-indigo-500 text-white text-xs rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:ring-offset-1 transition-colors duration-200 shadow-sm text-center"
           >
-            Create New Gist
+            Create Gist
           </Link>
         </div>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-100 border border-red-300 text-red-700 rounded">
-          {error.includes("GitHub token not found") ? (
-            <>
-              {error} You need to add your{" "}
-              <Link href="/profile" className="font-medium underline">
-                GitHub Personal Access Token
-              </Link>{" "}
-              to use this feature.
-            </>
-          ) : (
-            error
-          )}
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded">
+          {error}
         </div>
       )}
 
       {/* Search Bar */}
-      <div className="mb-6">
+      <div className="mb-5">
         <form onSubmit={handleSearch} className="flex gap-2">
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search gists by description or filename..."
-            className="flex-grow px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="Search your gists by description or filename..."
+            className="flex-grow px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-400"
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="px-3 py-1.5 bg-indigo-500 text-white text-xs rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-400 transition-colors duration-200 shadow-sm"
             disabled={loading}
           >
             Search
@@ -248,186 +324,151 @@ export default function GistsPage() {
             <button
               type="button"
               onClick={handleResetSearch}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+              className="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded-md hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors duration-200 shadow-sm"
             >
-              Reset
+              Clear
             </button>
           )}
         </form>
       </div>
 
       {/* Gists List */}
-      <div className="space-y-4">
-        {loading && page === 1 ? (
-          <div className="flex justify-center items-center min-h-[40vh]">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-          </div>
-        ) : gists.length === 0 ? (
-          <div className="text-center py-8">
-            <h3 className="text-lg font-medium text-gray-700">
-              No gists found
-            </h3>
-            <p className="text-gray-500 mt-2">
-              {searchTerm
-                ? `No gists matching "${searchTerm}"`
-                : "You haven't created any gists yet"}
-            </p>
-            {!searchTerm && (
-              <Link
-                href="/gists/new"
-                className="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-              >
-                Create Your First Gist
-              </Link>
-            )}
-          </div>
-        ) : (
-          <>
-            {gists.map((gist) => (
-              <div
-                key={gist.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
-              >
-                <div className="p-6">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h2 className="text-xl font-semibold mb-2 text-gray-800">
-                        <Link
-                          href={`/gists/${gist.id}`}
-                          className="hover:text-indigo-600 transition-colors"
-                        >
-                          {gist.description ||
-                            Object.keys(gist.files)[0] ||
-                            "Untitled Gist"}
-                        </Link>
-                      </h2>
-                      <p className="text-sm text-gray-500">
-                        Created: {formatDate(gist.created_at)} · Updated:{" "}
-                        {formatDate(gist.updated_at)}
-                      </p>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Link
-                        href={`/gists/${gist.id}/edit`}
-                        className="px-3 py-1 text-sm bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => setDeleteId(gist.id)}
-                        className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
+      {loading && page === 1 ? (
+        <div className="flex justify-center items-center min-h-[40vh]">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+      ) : gists.length === 0 ? (
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 text-center">
+          <p className="text-gray-500 mb-3">
+            {searchTerm
+              ? "No gists found matching your search"
+              : "You don't have any gists yet"}
+          </p>
+          <Link
+            href="/gists/new"
+            className="inline-flex items-center px-3 py-1.5 bg-indigo-500 text-white text-xs rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:ring-offset-1 transition-colors duration-200 shadow-sm"
+          >
+            Create Your First Gist
+          </Link>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-4">
+            {gists.map((gist) => {
+              // Get the first file from the gist
+              const fileName = Object.keys(gist.files)[0];
+              const file = gist.files[fileName];
 
-                  <div className="mt-4">
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">
-                      Files:
-                    </h3>
-                    <ul className="space-y-1">
-                      {Object.keys(gist.files).map((filename) => (
-                        <li key={filename} className="text-sm">
-                          <span className="text-gray-800 font-medium">
-                            {filename}
-                          </span>
-                          {gist.files[filename].language && (
-                            <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                              {gist.files[filename].language}
-                            </span>
-                          )}
-                          <span className="ml-2 text-gray-500">
-                            ({gist.files[filename].size} bytes)
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+              return (
+                <div
+                  key={gist.id}
+                  className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden"
+                >
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center">
+                        <img
+                          src={gist.owner.avatar_url}
+                          alt={gist.owner.login}
+                          className="w-6 h-6 rounded-full mr-2"
+                        />
+                        <span className="text-sm font-medium text-indigo-600">
+                          {gist.owner.login}
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {formatDate(gist.created_at)}
+                      </span>
+                    </div>
 
-                  <div className="mt-4 flex justify-between items-center">
-                    <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
-                      {gist.public ? "Public" : "Private"}
-                    </span>
-                    <a
-                      href={gist.html_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-indigo-600 hover:text-indigo-800"
+                    <Link
+                      href={`/gists/${gist.id}`}
+                      className="text-base font-medium text-gray-800 hover:text-indigo-600 mb-2 block truncate"
                     >
-                      View on GitHub
-                    </a>
+                      {fileName}
+                    </Link>
+
+                    {gist.description && (
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                        {gist.description}
+                      </p>
+                    )}
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                          {file.language || "Plain Text"}
+                        </span>
+                        <span className="ml-2 text-xs text-gray-500">
+                          {gist.public ? "Public Gist" : "Private Gist"}
+                        </span>
+                      </div>
+
+                      <div className="flex space-x-2">
+                        <Link
+                          href={`/gists/${gist.id}/edit`}
+                          className="text-xs text-indigo-600 hover:text-indigo-800"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          onClick={() => setDeleteId(gist.id)}
+                          className="text-xs text-red-600 hover:text-red-800"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Delete Confirmation Dialog */}
+                  {deleteId === gist.id && (
+                    <div className="p-4 bg-red-50 border-t border-red-100">
+                      <p className="text-sm text-red-700 mb-2">
+                        Are you sure you want to delete this gist?
+                      </p>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleDelete(gist.id)}
+                          disabled={isDeleting}
+                          className="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-400 disabled:opacity-50"
+                        >
+                          {isDeleting ? "Deleting..." : "Yes, Delete"}
+                        </button>
+                        <button
+                          onClick={() => setDeleteId(null)}
+                          className="px-3 py-1 bg-gray-200 text-gray-800 text-xs rounded-md hover:bg-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
+          </div>
 
-            {/* Pagination */}
-            {!searchTerm && gists.length > 0 && (
-              <div className="mt-8 flex justify-center">
-                {page > 1 && (
-                  <button
-                    onClick={() => setPage(page - 1)}
-                    className="mx-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    disabled={loading}
-                  >
-                    Previous
-                  </button>
-                )}
-                <span className="mx-2 px-4 py-2 text-gray-700">
-                  Page {page}
-                </span>
-                {hasMore && (
-                  <button
-                    onClick={() => setPage(page + 1)}
-                    className="mx-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    disabled={loading}
-                  >
-                    Next
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Loading indicator for pagination */}
-            {loading && page > 1 && (
-              <div className="mt-8 flex justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Delete Confirmation Modal */}
-      {deleteId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              Delete Gist
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this gist? This action cannot be
-              undone.
-            </p>
-            <div className="flex justify-end space-x-3">
+          {/* Load More Button */}
+          {hasMore && (
+            <div className="mt-6 text-center">
               <button
-                onClick={() => setDeleteId(null)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                disabled={isDeleting}
+                onClick={() => setPage((prev) => prev + 1)}
+                disabled={loading}
+                className="px-4 py-2 bg-white text-indigo-600 border border-indigo-300 rounded-md hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 disabled:opacity-50"
               >
-                Cancel
-              </button>
-              <button
-                onClick={() => deleteId && handleDelete(deleteId)}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
-                disabled={isDeleting}
-              >
-                {isDeleting ? "Deleting..." : "Delete"}
+                {loading ? (
+                  <span className="flex items-center justify-center">
+                    <span className="animate-spin h-4 w-4 border-t-2 border-b-2 border-indigo-500 mr-2 rounded-full"></span>
+                    Loading...
+                  </span>
+                ) : (
+                  "Load More"
+                )}
               </button>
             </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
     </div>
   );

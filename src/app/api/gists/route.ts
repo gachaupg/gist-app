@@ -35,23 +35,39 @@ export async function GET(req: NextRequest) {
     // Find user with GitHub token
     const user = await User.findById(session.user?.id).select("githubToken");
 
-    if (!user || !user.githubToken) {
+    if (!user?.githubToken) {
       return NextResponse.json(
         {
           error:
-            "GitHub token not found. Please add your token in the profile settings.",
+            "GitHub token not found. Please add your token in the profile page.",
         },
         { status: 400 }
       );
     }
 
-    // Create GitHub client
+    // Create GitHub client with user token
     const github = createGitHubClient(user.githubToken);
 
-    // Fetch gists from GitHub API
-    const gists = await github.listGists(per_page, page);
+    try {
+      // Get the authenticated GitHub user to ensure we're getting only their gists
+      const authUser = await github.getAuthenticatedUser();
 
-    return NextResponse.json(gists);
+      // Fetch gists from GitHub API for the authenticated user
+      const gists = await github.listUserGists(authUser.login, per_page, page);
+
+      return NextResponse.json(gists);
+    } catch (error: any) {
+      if (error.status === 401) {
+        return NextResponse.json(
+          {
+            error:
+              "Invalid GitHub token. Please update your token in the profile page.",
+          },
+          { status: 401 }
+        );
+      }
+      throw error; // Rethrow for the outer catch block
+    }
   } catch (error: any) {
     console.error("Error fetching gists:", error);
 
@@ -60,7 +76,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Invalid GitHub token. Please update your token in the profile settings.",
+            "Invalid GitHub token. Please update your token in the profile page.",
         },
         { status: 401 }
       );
@@ -104,17 +120,17 @@ export async function POST(req: NextRequest) {
     // Find user with GitHub token
     const user = await User.findById(session.user?.id).select("githubToken");
 
-    if (!user || !user.githubToken) {
+    if (!user?.githubToken) {
       return NextResponse.json(
         {
           error:
-            "GitHub token not found. Please add your token in the profile settings.",
+            "GitHub token not found. Please add your token in the profile page.",
         },
         { status: 400 }
       );
     }
 
-    // Create GitHub client
+    // Create GitHub client with user token
     const github = createGitHubClient(user.githubToken);
 
     // Create gist on GitHub
@@ -137,7 +153,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Invalid GitHub token. Please update your token in the profile settings.",
+            "Invalid GitHub token. Please update your token in the profile page.",
         },
         { status: 401 }
       );

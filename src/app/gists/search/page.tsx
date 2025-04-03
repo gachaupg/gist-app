@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { debounce } from "lodash";
 
 interface GistFile {
   filename: string;
@@ -28,65 +30,63 @@ interface Gist {
   html_url: string;
 }
 
-export default function Home() {
+export default function SearchPage() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const initialQuery = searchParams.get("q") || "";
+
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [gists, setGists] = useState<Gist[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filteredGists, setFilteredGists] = useState<Gist[]>([]);
   const [activeTab, setActiveTab] = useState<"all" | "my">("all");
 
-  // Fetch gists
-  useEffect(() => {
-    const fetchGists = async () => {
-      try {
-        setLoading(true);
-        
-        // Use the public-gists endpoint instead of the regular gists endpoint
-        // This will work without requiring a GitHub token
-        const response = await fetch("/api/public-gists?per_page=30&page=1");
+  // Debounced search function
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      if (query.trim()) {
+        performSearch(query);
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to fetch gists");
-        }
-
-        const data = await response.json();
-        setGists(data);
-        setFilteredGists(data);
-      } catch (err: unknown) {
-        console.error("Error fetching gists:", err);
-        setError("Failed to load gists. Please try again.");
-      } finally {
-        setLoading(false);
+        // Update URL with search query
+        const params = new URLSearchParams(searchParams);
+        params.set("q", query);
+        router.replace(`/gists/search?${params.toString()}`);
       }
-    };
+    }, 500),
+    [searchParams]
+  );
 
-    fetchGists();
-  }, []);
-
-  // Handle search
+  // Initial search on load if query exists
   useEffect(() => {
-    if (searchQuery.trim() === "") {
-      // If no search query, filter by tab only
-      filterGistsByTab(activeTab, gists);
-    } else {
-      // If there's a search query, first filter by search then by tab
-      handleSearch();
+    if (initialQuery) {
+      performSearch(initialQuery);
     }
-  }, [searchQuery, gists, activeTab]);
+  }, [initialQuery]);
 
-  const handleSearch = async () => {
-    if (searchQuery.trim() === "") {
-      filterGistsByTab(activeTab, gists);
-      return;
+  // Trigger debounced search when query changes
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      debouncedSearch(searchQuery);
+    } else {
+      setGists([]);
+
+      // Update URL to remove query
+      const params = new URLSearchParams(searchParams);
+      params.delete("q");
+      router.replace(`/gists/search?${params.toString()}`);
     }
+  }, [searchQuery, debouncedSearch, searchParams, router]);
+
+  // Perform search
+  const performSearch = async (query: string) => {
+    setLoading(true);
+    setError(null);
 
     try {
-      // Use the public-gists search endpoint
       const response = await fetch(
-        `/api/public-gists/search?q=${encodeURIComponent(searchQuery)}`
+        `/api/gists/search?q=${encodeURIComponent(query)}`
       );
 
       if (!response.ok) {
@@ -98,16 +98,18 @@ export default function Home() {
     } catch (err) {
       console.error("Search error:", err);
       setError("Failed to search gists. Please try again.");
-      filterGistsByTab(activeTab, gists);
+      setGists([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Filter gists by tab
   const filterGistsByTab = (tab: "all" | "my", gistsToFilter: Gist[]) => {
     if (tab === "all" || !session?.user?.name) {
-      setFilteredGists(gistsToFilter);
+      setGists(gistsToFilter);
     } else {
-      setFilteredGists(
+      setGists(
         gistsToFilter.filter((gist) => gist.owner.login === session.user?.name)
       );
     }
@@ -116,7 +118,7 @@ export default function Home() {
   // Handle tab change
   const handleTabChange = (tab: "all" | "my") => {
     setActiveTab(tab);
-    filterGistsByTab(tab, searchQuery.trim() === "" ? gists : filteredGists);
+    filterGistsByTab(tab, gists);
   };
 
   // Format date
@@ -129,24 +131,16 @@ export default function Home() {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-[40vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto px-4 max-w-6xl">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-xl font-semibold text-gray-800">Public Gists</h1>
+      <div className="mb-6">
         <Link
-          href="/gists/new"
-          className="px-3 py-1.5 bg-indigo-500 text-white text-xs rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:ring-offset-1 transition-colors duration-200 shadow-sm"
+          href="/gists"
+          className="text-indigo-600 hover:text-indigo-800 mb-2 inline-block"
         >
-          Create Gist
+          ← Back to Gists
         </Link>
+        <h1 className="text-2xl font-bold text-gray-800">Search Gists</h1>
       </div>
 
       {error && (
@@ -161,10 +155,11 @@ export default function Home() {
           <div className="flex-1">
             <input
               type="text"
-              placeholder="Search gists..."
+              placeholder="Search by filename, description, or content..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
+              autoFocus
             />
           </div>
           <div className="flex border border-gray-200 rounded-md overflow-hidden">
@@ -176,7 +171,7 @@ export default function Home() {
                   : "bg-white text-gray-700 hover:bg-gray-50"
               }`}
             >
-              All Gists
+              All Results
             </button>
             <button
               onClick={() => handleTabChange("my")}
@@ -187,25 +182,48 @@ export default function Home() {
               }`}
               disabled={!session}
             >
-              My Gists
+              My Results
             </button>
           </div>
         </div>
       </div>
 
-      {filteredGists.length === 0 ? (
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-          <p className="text-gray-500 text-sm">
-            {searchQuery
+      {/* Loading indicator */}
+      {loading && (
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+      )}
+
+      {/* Search results */}
+      {!loading && searchQuery.trim() !== "" && (
+        <div className="mb-4">
+          <p className="text-sm text-gray-500">
+            {gists.length === 0
               ? "No gists found matching your search"
-              : activeTab === "my"
-              ? "You don't have any gists yet"
-              : "No gists found"}
+              : `Found ${gists.length} gist${gists.length === 1 ? "" : "s"}`}
           </p>
         </div>
+      )}
+
+      {gists.length === 0 && !loading ? (
+        searchQuery.trim() !== "" ? (
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 text-center">
+            <p className="text-gray-500 mb-2">
+              No gists found matching your search
+            </p>
+            <p className="text-sm text-gray-400">
+              Try different keywords or filters
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 text-center">
+            <p className="text-gray-500">Enter a search term to find gists</p>
+          </div>
+        )
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredGists.map((gist) => {
+          {gists.map((gist) => {
             const fileName = Object.keys(gist.files)[0];
             const file = gist.files[fileName];
             const isOwnGist = gist.owner.login === session?.user?.name;

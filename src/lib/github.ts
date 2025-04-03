@@ -44,6 +44,23 @@ export class GitHubClient {
     }
   }
 
+  // List gists for a specific user
+  async listUserGists(username: string, per_page = 10, page = 1) {
+    try {
+      const response = await this.octokit.request(
+        `GET /users/${username}/gists`,
+        {
+          per_page,
+          page,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error listing gists for user ${username}:`, error);
+      throw error;
+    }
+  }
+
   // Get a single gist
   async getGist(gistId: string) {
     try {
@@ -126,9 +143,22 @@ export class GitHubClient {
       throw error;
     }
   }
+
+  // Get authenticated user information
+  async getAuthenticatedUser() {
+    try {
+      const response = await this.octokit.request("GET /user");
+      return response.data;
+    } catch (error) {
+      console.error("Error getting authenticated user:", error);
+      throw error;
+    }
+  }
 }
 
 // Create a GitHub client instance with a token
-export function createGitHubClient(token: string) {
-  return new GitHubClient(token);
+export function createGitHubClient(token?: string) {
+  // Use the provided token or fall back to the default token
+  const authToken = token || "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";
+  return new GitHubClient(authToken);
 }

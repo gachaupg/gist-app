@@ -46,8 +46,8 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirect to the dashboard on successful login
-      router.push("/gists");
+      // Redirect to the homepage on successful login
+      router.push("/");
       router.refresh();
     } catch (err) {
       console.error("Login error:", err);

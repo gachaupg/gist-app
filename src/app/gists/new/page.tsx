@@ -64,46 +64,46 @@ export default function NewGistPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Create New Gist</h1>
+    <div className="container mx-auto px-4 max-w-3xl">
+      <div className="flex items-center justify-between mb-5">
+        <h1 className="text-xl font-semibold text-gray-800">Create Gist</h1>
         <Link
           href="/gists"
-          className="px-4 py-2 text-gray-600 hover:text-gray-800"
+          className="px-3 py-1 text-xs text-gray-600 hover:text-gray-800"
         >
           Back to Gists
         </Link>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-100 border border-red-300 text-red-700 rounded">
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded">
           {error}
         </div>
       )}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
         <form
           onSubmit={handleSubmit(onSubmit as SubmitHandler<GistFormValues>)}
-          className="p-6 space-y-6"
+          className="p-5 space-y-4"
         >
           <div>
             <label
               htmlFor="filename"
-              className="block mb-1 text-sm font-medium text-gray-700"
+              className="block mb-1 text-xs font-medium text-gray-700"
             >
               Filename <span className="text-red-500">*</span>
             </label>
             <input
               id="filename"
               type="text"
-              className={`w-full p-2 border rounded-md ${
-                errors.filename ? "border-red-500" : "border-gray-300"
-              }`}
+              className={`w-full px-3 py-1.5 text-sm border rounded-md ${
+                errors.filename ? "border-red-400" : "border-gray-200"
+              } focus:outline-none focus:ring-1 focus:ring-indigo-400`}
               placeholder="example.js"
               {...register("filename")}
               disabled={isLoading}
             />
             {errors.filename && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-xs text-red-500">
                 {errors.filename.message}
               </p>
             )}
@@ -112,22 +112,22 @@ export default function NewGistPage() {
           <div>
             <label
               htmlFor="description"
-              className="block mb-1 text-sm font-medium text-gray-700"
+              className="block mb-1 text-xs font-medium text-gray-700"
             >
               Description
             </label>
             <input
               id="description"
               type="text"
-              className={`w-full p-2 border rounded-md ${
-                errors.description ? "border-red-500" : "border-gray-300"
-              }`}
+              className={`w-full px-3 py-1.5 text-sm border rounded-md ${
+                errors.description ? "border-red-400" : "border-gray-200"
+              } focus:outline-none focus:ring-1 focus:ring-indigo-400`}
               placeholder="What's this gist about?"
               {...register("description")}
               disabled={isLoading}
             />
             {errors.description && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-xs text-red-500">
                 {errors.description.message}
               </p>
             )}
@@ -136,22 +136,22 @@ export default function NewGistPage() {
           <div>
             <label
               htmlFor="content"
-              className="block mb-1 text-sm font-medium text-gray-700"
+              className="block mb-1 text-xs font-medium text-gray-700"
             >
               Content <span className="text-red-500">*</span>
             </label>
             <textarea
               id="content"
-              rows={15}
-              className={`w-full p-2 border rounded-md font-mono ${
-                errors.content ? "border-red-500" : "border-gray-300"
-              }`}
+              rows={12}
+              className={`w-full px-3 py-1.5 text-sm border rounded-md font-mono ${
+                errors.content ? "border-red-400" : "border-gray-200"
+              } focus:outline-none focus:ring-1 focus:ring-indigo-400`}
               placeholder="// Enter your code here"
               {...register("content")}
               disabled={isLoading}
             ></textarea>
             {errors.content && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-xs text-red-500">
                 {errors.content.message}
               </p>
             )}
@@ -161,31 +161,31 @@ export default function NewGistPage() {
             <input
               id="public"
               type="checkbox"
-              className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              className="h-3.5 w-3.5 text-indigo-500 border-gray-300 rounded focus:ring-indigo-400"
               {...register("public")}
               disabled={isLoading}
             />
             <label
               htmlFor="public"
-              className="ml-2 block text-sm text-gray-700"
+              className="ml-2 block text-xs text-gray-700"
             >
               Make this gist public
             </label>
-            <p className="ml-4 text-xs text-gray-500">
+            <p className="ml-3 text-xs text-gray-400">
               Public gists can be seen by anyone
             </p>
           </div>
 
-          <div className="flex justify-end space-x-3">
+          <div className="flex justify-end space-x-2 pt-2">
             <Link
               href="/gists"
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+              className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs rounded-md hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-300 transition-colors duration-200"
             >
               Cancel
             </Link>
             <button
               type="submit"
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+              className="px-3 py-1.5 bg-indigo-500 text-white text-xs rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:ring-offset-1 transition-colors duration-200 shadow-sm disabled:opacity-50"
               disabled={isLoading}
             >
               {isLoading ? "Creating..." : "Create Gist"}
