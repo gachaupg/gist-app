@@ -5,14 +5,10 @@ import dbConnect from "@/lib/db";
 import User from "@/models/User";
 import { createGitHubClient } from "@/lib/github";
 
-interface GistParams {
-  id: string;
-}
-
 // GET /api/gists/:id - Get a single gist
 export async function GET(
   request: NextRequest,
-  { params }: { params: GistParams }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Check authentication
@@ -45,7 +41,7 @@ export async function GET(
     const gist = await github.getGist(params.id);
 
     return NextResponse.json(gist);
-  } catch (error: Error & { status?: number }) {
+  } catch (error: any) {
     console.error(`Error fetching gist ${params.id}:`, error);
 
     // Handle GitHub API errors
@@ -73,7 +69,7 @@ export async function GET(
 // PATCH /api/gists/:id - Update a gist
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: GistParams }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Check authentication
@@ -113,7 +109,7 @@ export async function PATCH(
     });
 
     return NextResponse.json(updatedGist);
-  } catch (error: Error & { status?: number }) {
+  } catch (error: any) {
     console.error(`Error updating gist ${params.id}:`, error);
 
     // Handle GitHub API errors
@@ -141,7 +137,7 @@ export async function PATCH(
 // DELETE /api/gists/:id - Delete a gist
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: GistParams }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Check authentication
@@ -174,7 +170,7 @@ export async function DELETE(
     await github.deleteGist(params.id);
 
     return NextResponse.json({ success: true });
-  } catch (error: Error & { status?: number }) {
+  } catch (error: any) {
     console.error(`Error deleting gist ${params.id}:`, error);
 
     // Handle GitHub API errors
