@@ -6,11 +6,10 @@ import User from "@/models/User";
 import { createGitHubClient } from "@/lib/github";
 
 // GET /api/gists/:id/star - Check if a gist is starred
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, context: any) {
   try {
+    const { id } = context.params;
+
     // Check authentication
     const session = await getServerSession(authOptions);
 
@@ -38,11 +37,11 @@ export async function GET(
     const github = createGitHubClient(user.githubToken);
 
     // Check if gist is starred
-    const isStarred = await github.isGistStarred(params.id);
+    const isStarred = await github.isGistStarred(id);
 
     return NextResponse.json({ starred: isStarred });
   } catch (error: Error & { status?: number }) {
-    console.error(`Error checking if gist ${params.id} is starred:`, error);
+    console.error(`Error checking if gist is starred:`, error);
     return NextResponse.json(
       { error: "Failed to check if gist is starred" },
       { status: 500 }
@@ -51,11 +50,10 @@ export async function GET(
 }
 
 // PUT /api/gists/:id/star - Star a gist
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(req: NextRequest, context: any) {
   try {
+    const { id } = context.params;
+
     // Check authentication
     const session = await getServerSession(authOptions);
 
@@ -83,21 +81,20 @@ export async function PUT(
     const github = createGitHubClient(user.githubToken);
 
     // Star gist
-    await github.starGist(params.id);
+    await github.starGist(id);
 
     return NextResponse.json({ success: true });
   } catch (error: Error & { status?: number }) {
-    console.error(`Error starring gist ${params.id}:`, error);
+    console.error(`Error starring gist:`, error);
     return NextResponse.json({ error: "Failed to star gist" }, { status: 500 });
   }
 }
 
 // DELETE /api/gists/:id/star - Unstar a gist
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest, context: any) {
   try {
+    const { id } = context.params;
+
     // Check authentication
     const session = await getServerSession(authOptions);
 
@@ -125,11 +122,11 @@ export async function DELETE(
     const github = createGitHubClient(user.githubToken);
 
     // Unstar gist
-    await github.unstarGist(params.id);
+    await github.unstarGist(id);
 
     return NextResponse.json({ success: true });
   } catch (error: Error & { status?: number }) {
-    console.error(`Error unstarring gist ${params.id}:`, error);
+    console.error(`Error unstarring gist:`, error);
     return NextResponse.json(
       { error: "Failed to unstar gist" },
       { status: 500 }

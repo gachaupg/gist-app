@@ -21,12 +21,9 @@ async function validateUser(req: NextRequest, userId: string) {
 }
 
 // GET /api/user/[id] - Get user profile
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, context: any) {
   try {
-    const userId = params.id;
+    const userId = context.params.id;
 
     // Validate authentication and authorization
     const authError = await validateUser(req, userId);
@@ -51,12 +48,9 @@ export async function GET(
 }
 
 // PUT /api/user/[id] - Update user profile
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(req: NextRequest, context: any) {
   try {
-    const userId = params.id;
+    const userId = context.params.id;
 
     // Validate authentication and authorization
     const authError = await validateUser(req, userId);
@@ -97,12 +91,9 @@ export async function PUT(
 }
 
 // DELETE /api/user/[id] - Delete user
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest, context: any) {
   try {
-    const userId = params.id;
+    const userId = context.params.id;
 
     // Validate authentication and authorization
     const authError = await validateUser(req, userId);

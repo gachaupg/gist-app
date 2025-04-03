@@ -6,11 +6,10 @@ import User from "@/models/User";
 import { createGitHubClient } from "@/lib/github";
 
 // GET /api/gists/:id - Get a single gist
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, context: any) {
   try {
+    const { id } = context.params;
+
     // Check authentication
     const session = await getServerSession(authOptions);
 
@@ -38,11 +37,11 @@ export async function GET(
     const github = createGitHubClient(user.githubToken);
 
     // Fetch gist from GitHub API
-    const gist = await github.getGist(params.id);
+    const gist = await github.getGist(id);
 
     return NextResponse.json(gist);
   } catch (error: any) {
-    console.error(`Error fetching gist ${params.id}:`, error);
+    console.error(`Error fetching gist:`, error);
 
     // Handle GitHub API errors
     if ("status" in error && error.status === 404) {
@@ -67,11 +66,10 @@ export async function GET(
 }
 
 // PATCH /api/gists/:id - Update a gist
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, context: any) {
   try {
+    const { id } = context.params;
+
     // Check authentication
     const session = await getServerSession(authOptions);
 
@@ -103,14 +101,14 @@ export async function PATCH(
 
     // Update gist on GitHub
     const updatedGist = await github.updateGist({
-      gist_id: params.id,
+      gist_id: id,
       description: body.description,
       files: body.files,
     });
 
     return NextResponse.json(updatedGist);
   } catch (error: any) {
-    console.error(`Error updating gist ${params.id}:`, error);
+    console.error(`Error updating gist:`, error);
 
     // Handle GitHub API errors
     if ("status" in error && error.status === 404) {
@@ -135,11 +133,10 @@ export async function PATCH(
 }
 
 // DELETE /api/gists/:id - Delete a gist
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, context: any) {
   try {
+    const { id } = context.params;
+
     // Check authentication
     const session = await getServerSession(authOptions);
 
@@ -167,11 +164,11 @@ export async function DELETE(
     const github = createGitHubClient(user.githubToken);
 
     // Delete gist on GitHub
-    await github.deleteGist(params.id);
+    await github.deleteGist(id);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error(`Error deleting gist ${params.id}:`, error);
+    console.error(`Error deleting gist:`, error);
 
     // Handle GitHub API errors
     if ("status" in error && error.status === 404) {

@@ -5,12 +5,9 @@ import User from "@/models/User";
 import { authOptions } from "@/lib/auth";
 import { GitHubClient } from "@/lib/github";
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(req: NextRequest, context: any) {
   try {
-    const userId = params.id;
+    const userId = context.params.id;
 
     // Check authentication
     const session = await getServerSession(authOptions);
