@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { z } from "zod";
 import dbConnect from "@/lib/db";
 import User from "@/models/User";
 import { createGitHubClient } from "@/lib/github";
-import { gistSchema } from "@/lib/validations";
 
-// GET /api/gists - List gists
+// Define error interface
+interface GitHubApiError extends Error {
+  status?: number;
+  message: string;
+}
+
+// Zod schema for gist creation
+const gistSchema = z.object({
+  filename: z.string().min(1, "Filename is required"),
+  description: z.string().optional(),
+  content: z.string().min(1, "Content is required"),
+  public: z.boolean().default(false),
+});
+
+// GET /api/gists - Get user's gists
 export async function GET(req: NextRequest) {
   try {
     // Check authentication
@@ -18,8 +32,8 @@ export async function GET(req: NextRequest) {
 
     // Get URL parameters
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const per_page = parseInt(searchParams.get("per_page") || "10", 10);
+    const per_page = Number(searchParams.get("per_page")) || 30;
+    const page = Number(searchParams.get("page")) || 1;
 
     // Connect to database
     await dbConnect();
@@ -44,7 +58,7 @@ export async function GET(req: NextRequest) {
     const gists = await github.listGists(per_page, page);
 
     return NextResponse.json(gists);
-  } catch (error: any) {
+  } catch (error: GitHubApiError) {
     console.error("Error fetching gists:", error);
 
     // Handle GitHub API errors
@@ -121,7 +135,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(newGist, { status: 201 });
-  } catch (error: any) {
+  } catch (error: GitHubApiError) {
     console.error("Error creating gist:", error);
 
     // Handle GitHub API errors

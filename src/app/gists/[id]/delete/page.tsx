@@ -5,10 +5,30 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+// Define interfaces for gist data
+interface GistFile {
+  filename?: string;
+  content?: string;
+}
+
+interface Gist {
+  id: string;
+  description: string;
+  files: Record<string, GistFile>;
+  created_at: string;
+  updated_at: string;
+  public: boolean;
+}
+
+interface ApiError extends Error {
+  message: string;
+}
+
 export default function DeleteGistPage({ params }: { params: { id: string } }) {
-  const { data: session, status } = useSession();
+  // Using status only from useSession since data is unused
+  const { status } = useSession();
   const router = useRouter();
-  const [gist, setGist] = useState<any>(null);
+  const [gist, setGist] = useState<Gist | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +82,7 @@ export default function DeleteGistPage({ params }: { params: { id: string } }) {
       // Redirect to gists page on success
       router.push("/gists");
       router.refresh();
-    } catch (err: any) {
+    } catch (err: ApiError) {
       console.error("Error deleting gist:", err);
       setError(err.message || "Failed to delete gist. Please try again.");
       setDeleting(false);

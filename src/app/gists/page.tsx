@@ -30,8 +30,14 @@ interface Gist {
   html_url: string;
 }
 
+// Add ApiError interface
+interface ApiError extends Error {
+  message: string;
+}
+
 export default function GistsPage() {
-  const { data: session, status } = useSession();
+  // Using only status since session data is unused
+  const { status } = useSession();
   const router = useRouter();
   const [gists, setGists] = useState<Gist[]>([]);
   const [loading, setLoading] = useState(true);
@@ -167,7 +173,7 @@ export default function GistsPage() {
       // Remove the deleted gist from state
       setGists((prevGists) => prevGists.filter((gist) => gist.id !== id));
       setDeleteId(null);
-    } catch (err: any) {
+    } catch (err: ApiError) {
       console.error("Error deleting gist:", err);
       setError(err.message || "Failed to delete gist. Please try again.");
     } finally {

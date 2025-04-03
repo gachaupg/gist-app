@@ -1,11 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { gistSchema } from "@/lib/validations";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { gistSchema } from "@/lib/validations";
+
+// Define error interface
+interface ApiError extends Error {
+  message: string;
+}
 
 type GistFormValues = {
   filename: string;
@@ -55,7 +60,7 @@ export default function NewGistPage() {
       // Redirect to the gists page on success
       router.push("/gists");
       router.refresh();
-    } catch (err: any) {
+    } catch (err: ApiError) {
       console.error("Error creating gist:", err);
       setError(err.message || "Failed to create gist. Please try again.");
     } finally {

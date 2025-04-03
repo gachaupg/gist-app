@@ -3,8 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import User from "@/models/User";
-import { createGitHubClient } from "@/lib/github";
 import { Octokit } from "octokit";
+
+// Define error interface
+interface GitHubApiError extends Error {
+  status?: number;
+  message: string;
+}
 
 // GET /api/gists/search - Search gists
 export async function GET(req: NextRequest) {
@@ -137,7 +142,7 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json(finalFilteredGists);
-  } catch (error: any) {
+  } catch (error: GitHubApiError) {
     console.error("Error searching gists:", error);
 
     // Handle GitHub API errors

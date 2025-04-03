@@ -8,6 +8,24 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { profileSchema, githubTokenSchema } from "@/lib/validations";
 import Link from "next/link";
 
+// Define user data interface
+interface UserData {
+  id: string;
+  name: string;
+  email: string;
+  bio?: string;
+  location?: string;
+  avatar?: string;
+  createdAt: string;
+  updatedAt: string;
+  hasGithubToken: boolean;
+}
+
+// Define error interface
+interface ApiError extends Error {
+  message: string;
+}
+
 type ProfileFormValues = {
   name: string;
   bio: string;
@@ -26,7 +44,7 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
 
   // Profile form
   const {
@@ -121,7 +139,7 @@ export default function ProfilePage() {
       const updatedUser = await response.json();
       setUserData(updatedUser);
       setSuccess("Profile updated successfully");
-    } catch (err: any) {
+    } catch (err: ApiError) {
       console.error("Error updating profile:", err);
       setError(err.message || "An error occurred while updating your profile");
     } finally {
@@ -152,7 +170,7 @@ export default function ProfilePage() {
       }
 
       setSuccess("GitHub token updated successfully");
-    } catch (err: any) {
+    } catch (err: ApiError) {
       console.error("Error updating GitHub token:", err);
       setError(
         err.message || "An error occurred while updating your GitHub token"
@@ -181,7 +199,7 @@ export default function ProfilePage() {
 
       // Sign out and redirect to home page
       router.push("/api/auth/signout");
-    } catch (err: any) {
+    } catch (err: ApiError) {
       console.error("Error deleting account:", err);
       setError(err.message || "An error occurred while deleting your account");
       setLoading(false);
@@ -361,8 +379,8 @@ export default function ProfilePage() {
           </h2>
           <p className="text-gray-600 mb-4">
             Add your GitHub Personal Access Token to manage your gists. The
-            token needs the 'gist' scope to create, read, update, and delete
-            your gists.
+            token needs the &apos;gist&apos; scope to create, read, update, and
+            delete your gists.
           </p>
           <form
             onSubmit={handleSubmitToken(onTokenSubmit)}

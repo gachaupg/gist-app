@@ -8,18 +8,23 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from "next/link";
 
+// Define error interface
+interface ApiError extends Error {
+  message: string;
+}
+
 // Edit gist schema
 const editGistSchema = z.object({
-  filename: z.string().min(1, { message: "Filename is required" }),
+  filename: z.string().min(1, "Filename is required"),
   description: z.string().optional(),
-  content: z.string().min(1, { message: "Content is required" }),
-  public: z.boolean(),
+  content: z.string().min(1, "Content is required"),
+  public: z.boolean().default(false),
 });
 
 type EditGistFormValues = z.infer<typeof editGistSchema>;
 
 export default function EditGistPage({ params }: { params: { id: string } }) {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -121,7 +126,7 @@ export default function EditGistPage({ params }: { params: { id: string } }) {
       // Redirect to the gist page on success
       router.push(`/gists/${params.id}`);
       router.refresh();
-    } catch (err: any) {
+    } catch (err: ApiError) {
       console.error("Error updating gist:", err);
       setError(err.message || "Failed to update gist. Please try again.");
     } finally {

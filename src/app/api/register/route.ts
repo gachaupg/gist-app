@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/db";
 import User from "@/models/User";
 import { registerSchema } from "@/lib/validations";
+
+// Define error interface
+interface DatabaseError extends Error {
+  code?: number | string;
+  message: string;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,7 +54,7 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: DatabaseError) {
     console.error("Registration error:", error);
     return NextResponse.json(
       { error: "Internal server error" },

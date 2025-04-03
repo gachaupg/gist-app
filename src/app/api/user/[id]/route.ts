@@ -5,6 +5,12 @@ import User from "@/models/User";
 import { profileSchema } from "@/lib/validations";
 import { authOptions } from "@/lib/auth";
 
+// Define error interface
+interface DatabaseError extends Error {
+  code?: number | string;
+  message: string;
+}
+
 // Helper function to check if user is authenticated and authorized
 async function validateUser(req: NextRequest, userId: string) {
   const session = await getServerSession(authOptions);
@@ -41,7 +47,7 @@ export async function GET(
     }
 
     return NextResponse.json(user);
-  } catch (error: any) {
+  } catch (error: DatabaseError) {
     console.error("Error getting user:", error);
     return NextResponse.json(
       { error: "Internal server error" },
@@ -87,7 +93,7 @@ export async function PUT(
     }
 
     return NextResponse.json(user);
-  } catch (error: any) {
+  } catch (error: DatabaseError) {
     console.error("Error updating user:", error);
     return NextResponse.json(
       { error: "Internal server error" },
@@ -117,7 +123,7 @@ export async function DELETE(
     }
 
     return NextResponse.json({ success: true }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: DatabaseError) {
     console.error("Error deleting user:", error);
     return NextResponse.json(
       { error: "Internal server error" },
