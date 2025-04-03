@@ -8,7 +8,7 @@ import { createGitHubClient } from "@/lib/github";
 // GET /api/gists/:id - Get a single gist
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     // Check authentication
@@ -38,11 +38,11 @@ export async function GET(
     const github = createGitHubClient(user.githubToken);
 
     // Fetch gist from GitHub API
-    const gist = await github.getGist(params.id);
+    const gist = await github.getGist(context.params.id);
 
     return NextResponse.json(gist);
   } catch (error: Error & { status?: number }) {
-    console.error(`Error fetching gist ${params.id}:`, error);
+    console.error(`Error fetching gist ${context.params.id}:`, error);
 
     // Handle GitHub API errors
     if ("status" in error && error.status === 404) {
@@ -69,7 +69,7 @@ export async function GET(
 // PATCH /api/gists/:id - Update a gist
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     // Check authentication
@@ -103,14 +103,14 @@ export async function PATCH(
 
     // Update gist on GitHub
     const updatedGist = await github.updateGist({
-      gist_id: params.id,
+      gist_id: context.params.id,
       description: body.description,
       files: body.files,
     });
 
     return NextResponse.json(updatedGist);
   } catch (error: Error & { status?: number }) {
-    console.error(`Error updating gist ${params.id}:`, error);
+    console.error(`Error updating gist ${context.params.id}:`, error);
 
     // Handle GitHub API errors
     if ("status" in error && error.status === 404) {
@@ -137,7 +137,7 @@ export async function PATCH(
 // DELETE /api/gists/:id - Delete a gist
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     // Check authentication
@@ -167,11 +167,11 @@ export async function DELETE(
     const github = createGitHubClient(user.githubToken);
 
     // Delete gist on GitHub
-    await github.deleteGist(params.id);
+    await github.deleteGist(context.params.id);
 
     return NextResponse.json({ success: true });
   } catch (error: Error & { status?: number }) {
-    console.error(`Error deleting gist ${params.id}:`, error);
+    console.error(`Error deleting gist ${context.params.id}:`, error);
 
     // Handle GitHub API errors
     if ("status" in error && error.status === 404) {
