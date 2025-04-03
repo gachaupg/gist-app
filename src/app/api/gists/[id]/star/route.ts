@@ -41,7 +41,7 @@ export async function GET(
     const isStarred = await github.isGistStarred(params.id);
 
     return NextResponse.json({ starred: isStarred });
-  } catch (error: any) {
+  } catch (error: Error & { status?: number }) {
     console.error(`Error checking if gist ${params.id} is starred:`, error);
     return NextResponse.json(
       { error: "Failed to check if gist is starred" },
@@ -86,7 +86,7 @@ export async function PUT(
     await github.starGist(params.id);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: Error & { status?: number }) {
     console.error(`Error starring gist ${params.id}:`, error);
     return NextResponse.json({ error: "Failed to star gist" }, { status: 500 });
   }
@@ -128,7 +128,7 @@ export async function DELETE(
     await github.unstarGist(params.id);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: Error & { status?: number }) {
     console.error(`Error unstarring gist ${params.id}:`, error);
     return NextResponse.json(
       { error: "Failed to unstar gist" },

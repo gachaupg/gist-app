@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import User from "@/models/User";
 import { createGitHubClient } from "@/lib/github";
-import { gistSchema } from "@/lib/validations";
 
 // GET /api/gists/:id - Get a single gist
 export async function GET(
@@ -42,15 +41,15 @@ export async function GET(
     const gist = await github.getGist(params.id);
 
     return NextResponse.json(gist);
-  } catch (error: any) {
+  } catch (error: Error & { status?: number }) {
     console.error(`Error fetching gist ${params.id}:`, error);
 
     // Handle GitHub API errors
-    if (error.status === 404) {
+    if ("status" in error && error.status === 404) {
       return NextResponse.json({ error: "Gist not found" }, { status: 404 });
     }
 
-    if (error.status === 401) {
+    if ("status" in error && error.status === 401) {
       return NextResponse.json(
         {
           error:
@@ -110,15 +109,15 @@ export async function PATCH(
     });
 
     return NextResponse.json(updatedGist);
-  } catch (error: any) {
+  } catch (error: Error & { status?: number }) {
     console.error(`Error updating gist ${params.id}:`, error);
 
     // Handle GitHub API errors
-    if (error.status === 404) {
+    if ("status" in error && error.status === 404) {
       return NextResponse.json({ error: "Gist not found" }, { status: 404 });
     }
 
-    if (error.status === 401) {
+    if ("status" in error && error.status === 401) {
       return NextResponse.json(
         {
           error:
@@ -171,15 +170,15 @@ export async function DELETE(
     await github.deleteGist(params.id);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: Error & { status?: number }) {
     console.error(`Error deleting gist ${params.id}:`, error);
 
     // Handle GitHub API errors
-    if (error.status === 404) {
+    if ("status" in error && error.status === 404) {
       return NextResponse.json({ error: "Gist not found" }, { status: 404 });
     }
 
-    if (error.status === 401) {
+    if ("status" in error && error.status === 401) {
       return NextResponse.json(
         {
           error:
