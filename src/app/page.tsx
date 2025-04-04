@@ -36,16 +36,25 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredGists, setFilteredGists] = useState<Gist[]>([]);
   const [activeTab, setActiveTab] = useState<"all" | "my">("all");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Fetch gists
   useEffect(() => {
     const fetchGists = async () => {
       try {
-        setLoading(true);
+        if (page === 1) {
+          setLoading(true);
+        } else {
+          setLoadingMore(true);
+        }
 
         // Use the public-gists endpoint instead of the regular gists endpoint
         // This will work without requiring a GitHub token
-        const response = await fetch("/api/public-gists?per_page=30&page=1");
+        const response = await fetch(
+          `/api/public-gists?per_page=4&page=${page}`
+        );
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -53,18 +62,31 @@ export default function Home() {
         }
 
         const data = await response.json();
-        setGists(data);
-        setFilteredGists(data);
+
+        // If we received fewer items than requested, there are no more pages
+        if (data.length < 4) {
+          setHasMore(false);
+        }
+
+        // Append new gists if loading more, otherwise replace
+        if (page === 1) {
+          setGists(data);
+          setFilteredGists(data);
+        } else {
+          setGists((prevGists) => [...prevGists, ...data]);
+          setFilteredGists((prevGists) => [...prevGists, ...data]);
+        }
       } catch (err: unknown) {
         console.error("Error fetching gists:", err);
         setError("Failed to load gists. Please try again.");
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     };
 
     fetchGists();
-  }, []);
+  }, [page]);
 
   // Handle search
   useEffect(() => {
@@ -95,6 +117,7 @@ export default function Home() {
 
       const searchResults = await response.json();
       filterGistsByTab(activeTab, searchResults);
+      setHasMore(false); // Disable pagination for search results
     } catch (err) {
       console.error("Search error:", err);
       setError("Failed to search gists. Please try again.");
@@ -119,6 +142,11 @@ export default function Home() {
     filterGistsByTab(tab, searchQuery.trim() === "" ? gists : filteredGists);
   };
 
+  // Handle load more
+  const handleLoadMore = () => {
+    setPage((prevPage) => prevPage + 1);
+  };
+
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -129,7 +157,7 @@ export default function Home() {
     });
   };
 
-  if (loading) {
+  if (loading && page === 1) {
     return (
       <div className="flex justify-center items-center min-h-[40vh]">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
@@ -204,60 +232,82 @@ export default function Home() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredGists.map((gist) => {
-            const fileName = Object.keys(gist.files)[0];
-            const file = gist.files[fileName];
-            const isOwnGist = gist.owner.login === session?.user?.name;
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredGists.map((gist) => {
+              const fileName = Object.keys(gist.files)[0];
+              const file = gist.files[fileName];
+              const isOwnGist = gist.owner.login === session?.user?.name;
 
-            return (
-              <Link href={`/gists/${gist.id}`} key={gist.id}>
-                <div
-                  className={`border rounded-lg shadow-sm hover:shadow-md hover:border-indigo-100 transition duration-200 h-full overflow-hidden ${
-                    isOwnGist ? "bg-indigo-50" : "bg-white border-gray-100"
-                  }`}
-                >
+              return (
+                <Link href={`/gists/${gist.id}`} key={gist.id}>
                   <div
-                    className={`p-4 border-b ${
-                      isOwnGist ? "border-indigo-100" : "border-gray-50"
+                    className={`border rounded-lg shadow-sm hover:shadow-md hover:border-indigo-100 transition duration-200 h-full overflow-hidden ${
+                      isOwnGist ? "bg-indigo-50" : "bg-white border-gray-100"
                     }`}
                   >
-                    <div className="flex items-center mb-2">
-                      <img
-                        src={gist.owner.avatar_url}
-                        alt={gist.owner.login}
-                        className="w-5 h-5 rounded-full mr-2"
-                      />
-                      <span
-                        className={`text-xs font-medium ${
-                          isOwnGist ? "text-indigo-600" : "text-indigo-500"
-                        }`}
-                      >
-                        {gist.owner.login} {isOwnGist && "(You)"}
+                    <div
+                      className={`p-4 border-b ${
+                        isOwnGist ? "border-indigo-100" : "border-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-center mb-2">
+                        <img
+                          src={gist.owner.avatar_url}
+                          alt={gist.owner.login}
+                          className="w-5 h-5 rounded-full mr-2"
+                        />
+                        <span
+                          className={`text-xs font-medium ${
+                            isOwnGist ? "text-indigo-600" : "text-indigo-500"
+                          }`}
+                        >
+                          {gist.owner.login} {isOwnGist && "(You)"}
+                        </span>
+                      </div>
+                      <h3 className="font-medium text-sm text-gray-700 truncate">
+                        {fileName}
+                      </h3>
+                      {gist.description && (
+                        <p className="text-gray-500 text-xs mt-1.5 line-clamp-2">
+                          {gist.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="px-4 py-2 bg-gray-50 text-xs text-gray-400 flex justify-between">
+                      <span className="text-xs font-medium">
+                        {file.language || "Plain Text"}
+                      </span>
+                      <span className="text-xs">
+                        {formatDate(gist.created_at)}
                       </span>
                     </div>
-                    <h3 className="font-medium text-sm text-gray-700 truncate">
-                      {fileName}
-                    </h3>
-                    {gist.description && (
-                      <p className="text-gray-500 text-xs mt-1.5 line-clamp-2">
-                        {gist.description}
-                      </p>
-                    )}
                   </div>
-                  <div className="px-4 py-2 bg-gray-50 text-xs text-gray-400 flex justify-between">
-                    <span className="text-xs font-medium">
-                      {file.language || "Plain Text"}
-                    </span>
-                    <span className="text-xs">
-                      {formatDate(gist.created_at)}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Load More Button */}
+          {hasMore && !searchQuery.trim() && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="px-4 py-2 bg-white text-indigo-600 border border-indigo-300 rounded-md hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 disabled:opacity-50"
+              >
+                {loadingMore ? (
+                  <span className="flex items-center justify-center">
+                    <span className="animate-spin h-4 w-4 border-t-2 border-b-2 border-indigo-500 mr-2 rounded-full"></span>
+                    Loading...
+                  </span>
+                ) : (
+                  "Load More"
+                )}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -42,6 +42,9 @@ export default function GistsPage() {
   const [hasMore, setHasMore] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchHasMore, setSearchHasMore] = useState(true);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -54,10 +57,17 @@ export default function GistsPage() {
   useEffect(() => {
     const fetchGists = async () => {
       if (status !== "authenticated") return;
+      if (isSearching) return; // Skip this effect if we're in search mode
 
       try {
-        setLoading(true);
-        const response = await fetch(`/api/gists?page=${page}&per_page=10`);
+        if (page === 1) {
+          setLoading(true);
+        } else {
+          // Only show loading indicator for additional pages
+          setHasMore(true);
+        }
+
+        const response = await fetch(`/api/gists?page=${page}&per_page=4`);
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -88,7 +98,7 @@ export default function GistsPage() {
         const data = await response.json();
 
         // If we got fewer items than requested, there are no more pages
-        if (data.length < 10) {
+        if (data.length < 4) {
           setHasMore(false);
         }
 
@@ -106,7 +116,62 @@ export default function GistsPage() {
     };
 
     fetchGists();
-  }, [page, status, router]);
+  }, [page, status, router, isSearching]);
+
+  // Effect for search with pagination
+  useEffect(() => {
+    const fetchSearchResults = async () => {
+      if (!isSearching || !searchTerm.trim()) return;
+
+      try {
+        setLoading(searchPage === 1);
+
+        const response = await fetch(
+          `/api/gists/search?q=${encodeURIComponent(
+            searchTerm
+          )}&page=${searchPage}&per_page=4`
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          if (
+            errorData.error &&
+            errorData.error.includes("GitHub token not found")
+          ) {
+            // Set hasToken to false to show token missing message
+            setHasToken(false);
+            setLoading(false);
+            return;
+          }
+
+          throw new Error(errorData.error || "Search failed");
+        }
+
+        const data = await response.json();
+
+        // Check if we have more results
+        if (data.length < 4) {
+          setSearchHasMore(false);
+        } else {
+          setSearchHasMore(true);
+        }
+
+        // Update gists array based on the page
+        if (searchPage === 1) {
+          setGists(data);
+        } else {
+          setGists((prevGists) => [...prevGists, ...data]);
+        }
+      } catch (err) {
+        console.error("Search error:", err);
+        setError("Search failed. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSearchResults();
+  }, [isSearching, searchTerm, searchPage]);
 
   // Handle search
   const handleSearch = async (e: React.FormEvent) => {
@@ -114,6 +179,7 @@ export default function GistsPage() {
 
     if (!searchTerm.trim()) {
       // If search is empty, reset to first page of all gists
+      setIsSearching(false);
       setPage(1);
       setHasMore(true);
       return;
@@ -123,32 +189,14 @@ export default function GistsPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(
-        `/api/gists/search?q=${encodeURIComponent(searchTerm)}`
-      );
+      // Set search mode and reset search page
+      setIsSearching(true);
+      setSearchPage(1);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (
-          errorData.error &&
-          errorData.error.includes("GitHub token not found")
-        ) {
-          // Set hasToken to false to show token missing message
-          setHasToken(false);
-          setLoading(false);
-          return;
-        }
-
-        throw new Error(errorData.error || "Search failed");
-      }
-
-      const data = await response.json();
-      setGists(data);
-      setHasMore(false); // No pagination for search results
+      // Initial search is handled by the useEffect that watches searchPage
     } catch (err) {
       console.error("Search error:", err);
       setError("Search failed. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
@@ -156,8 +204,18 @@ export default function GistsPage() {
   // Handle reset search
   const handleResetSearch = () => {
     setSearchTerm("");
+    setIsSearching(false);
     setPage(1);
     setHasMore(true);
+  };
+
+  // Handle load more based on current mode
+  const handleLoadMore = () => {
+    if (isSearching) {
+      setSearchPage((prev) => prev + 1);
+    } else {
+      setPage((prev) => prev + 1);
+    }
   };
 
   // Handle delete gist
@@ -320,7 +378,7 @@ export default function GistsPage() {
           >
             Search
           </button>
-          {searchTerm && (
+          {isSearching && (
             <button
               type="button"
               onClick={handleResetSearch}
@@ -333,23 +391,33 @@ export default function GistsPage() {
       </div>
 
       {/* Gists List */}
-      {loading && page === 1 ? (
+      {loading && (page === 1 || searchPage === 1) ? (
         <div className="flex justify-center items-center min-h-[40vh]">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
       ) : gists.length === 0 ? (
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 text-center">
           <p className="text-gray-500 mb-3">
-            {searchTerm
+            {isSearching
               ? "No gists found matching your search"
               : "You don't have any gists yet"}
           </p>
-          <Link
-            href="/gists/new"
-            className="inline-flex items-center px-3 py-1.5 bg-indigo-500 text-white text-xs rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:ring-offset-1 transition-colors duration-200 shadow-sm"
-          >
-            Create Your First Gist
-          </Link>
+          {!isSearching && (
+            <Link
+              href="/gists/new"
+              className="inline-flex items-center px-3 py-1.5 bg-indigo-500 text-white text-xs rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:ring-offset-1 transition-colors duration-200 shadow-sm"
+            >
+              Create Your First Gist
+            </Link>
+          )}
+          {isSearching && (
+            <button
+              onClick={handleResetSearch}
+              className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded-md hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors duration-200 shadow-sm"
+            >
+              Clear Search
+            </button>
+          )}
         </div>
       ) : (
         <>
@@ -450,10 +518,10 @@ export default function GistsPage() {
           </div>
 
           {/* Load More Button */}
-          {hasMore && (
+          {((isSearching && searchHasMore) || (!isSearching && hasMore)) && (
             <div className="mt-6 text-center">
               <button
-                onClick={() => setPage((prev) => prev + 1)}
+                onClick={handleLoadMore}
                 disabled={loading}
                 className="px-4 py-2 bg-white text-indigo-600 border border-indigo-300 rounded-md hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 disabled:opacity-50"
               >
