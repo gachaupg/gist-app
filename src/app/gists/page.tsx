@@ -67,7 +67,7 @@ export default function GistsPage() {
           setHasMore(true);
         }
 
-        const response = await fetch(`/api/gists?page=${page}&per_page=4`);
+        const response = await fetch(`/api/gists?page=${page}&per_page=6`);
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -98,7 +98,7 @@ export default function GistsPage() {
         const data = await response.json();
 
         // If we got fewer items than requested, there are no more pages
-        if (data.length < 4) {
+        if (data.length < 6) {
           setHasMore(false);
         }
 
@@ -129,7 +129,7 @@ export default function GistsPage() {
         const response = await fetch(
           `/api/gists/search?q=${encodeURIComponent(
             searchTerm
-          )}&page=${searchPage}&per_page=4`
+          )}&page=${searchPage}&per_page=6`
         );
 
         if (!response.ok) {
@@ -150,7 +150,7 @@ export default function GistsPage() {
         const data = await response.json();
 
         // Check if we have more results
-        if (data.length < 4) {
+        if (data.length < 6) {
           setSearchHasMore(false);
         } else {
           setSearchHasMore(true);

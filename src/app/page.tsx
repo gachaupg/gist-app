@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 interface GistFile {
   filename: string;
@@ -30,6 +31,7 @@ interface Gist {
 
 export default function Home() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [gists, setGists] = useState<Gist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export default function Home() {
         // Use the public-gists endpoint instead of the regular gists endpoint
         // This will work without requiring a GitHub token
         const response = await fetch(
-          `/api/public-gists?per_page=4&page=${page}`
+          `/api/public-gists?per_page=6&page=${page}`
         );
 
         if (!response.ok) {
@@ -64,7 +66,7 @@ export default function Home() {
         const data = await response.json();
 
         // If we received fewer items than requested, there are no more pages
-        if (data.length < 4) {
+        if (data.length < 6) {
           setHasMore(false);
         }
 
@@ -78,7 +80,17 @@ export default function Home() {
         }
       } catch (err: unknown) {
         console.error("Error fetching gists:", err);
-        setError("Failed to load gists. Please try again.");
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Failed to load gists. Please try again later.");
+        }
+
+        // Set empty arrays to prevent issues with mapping
+        if (page === 1) {
+          setGists([]);
+          setFilteredGists([]);
+        }
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -138,6 +150,12 @@ export default function Home() {
 
   // Handle tab change
   const handleTabChange = (tab: "all" | "my") => {
+    if (tab === "my" && session) {
+      // Navigate to My Gists page using Next.js router
+      router.push("/gists");
+      return;
+    }
+
     setActiveTab(tab);
     filterGistsByTab(tab, searchQuery.trim() === "" ? gists : filteredGists);
   };
@@ -169,12 +187,20 @@ export default function Home() {
     <div className="container mx-auto px-4 max-w-6xl">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-xl font-semibold text-gray-800">Public Gists</h1>
-        <Link
-          href="/gists/new"
-          className="px-3 py-1.5 bg-indigo-500 text-white text-xs rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:ring-offset-1 transition-colors duration-200 shadow-sm"
-        >
-          Create Gist
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/gists"
+            className="px-3 py-1.5 bg-indigo-100 text-indigo-700 text-xs rounded-md hover:bg-indigo-200 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:ring-offset-1 transition-colors duration-200 shadow-sm"
+          >
+            My Gists
+          </Link>
+          <Link
+            href="/gists/new"
+            className="px-3 py-1.5 bg-indigo-500 text-white text-xs rounded-md hover:bg-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:ring-offset-1 transition-colors duration-200 shadow-sm"
+          >
+            Create Gist
+          </Link>
+        </div>
       </div>
 
       {error && (
@@ -195,28 +221,33 @@ export default function Home() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
             />
           </div>
-          <div className="flex border border-gray-200 rounded-md overflow-hidden">
-            <button
-              onClick={() => handleTabChange("all")}
-              className={`px-4 py-2 text-sm font-medium ${
-                activeTab === "all"
-                  ? "bg-indigo-500 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              All Gists
-            </button>
-            <button
-              onClick={() => handleTabChange("my")}
-              className={`px-4 py-2 text-sm font-medium ${
-                activeTab === "my"
-                  ? "bg-indigo-500 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-50"
-              }`}
-              disabled={!session}
-            >
-              My Gists
-            </button>
+          <div className="flex flex-col">
+            <div className="flex border border-gray-200 rounded-md overflow-hidden">
+              <button
+                onClick={() => handleTabChange("all")}
+                className={`px-4 py-2 text-sm font-medium ${
+                  activeTab === "all"
+                    ? "bg-indigo-500 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                Show All
+              </button>
+              <button
+                onClick={() => handleTabChange("my")}
+                className={`px-4 py-2 text-sm font-medium ${
+                  activeTab === "my"
+                    ? "bg-indigo-500 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+                disabled={!session}
+              >
+                Go to My Gists
+              </button>
+            </div>
+            <span className="text-xs text-gray-500 mt-1">
+              Filter or navigate to your gists
+            </span>
           </div>
         </div>
       </div>

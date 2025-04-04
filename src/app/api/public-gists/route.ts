@@ -9,24 +9,45 @@ export async function GET(req: NextRequest) {
     const per_page = Number(searchParams.get("per_page")) || 30;
     const page = Number(searchParams.get("page")) || 1;
 
-    // Use the default token from the GitHub client
-    // This will fetch public gists only, without requiring user authentication
+    // Create a GitHub client - no token needed for public gists
     const github = createGitHubClient();
 
     // Fetch public gists from GitHub API
     try {
-      const gists = await github.listGists(per_page, page);
+      // Use the dedicated public gists endpoint which has a higher rate limit
+      const gists = await github.listPublicGists(per_page, page);
       return NextResponse.json(gists);
     } catch (error: any) {
       console.error("Error fetching public gists:", error);
+
+      // Handle rate limiting
+      if (
+        error.status === 403 &&
+        error.response?.headers?.["x-ratelimit-remaining"] === "0"
+      ) {
+        const resetTime = error.response?.headers?.["x-ratelimit-reset"];
+        const resetDate = resetTime
+          ? new Date(Number(resetTime) * 1000).toISOString()
+          : "soon";
+
+        return NextResponse.json(
+          {
+            error: `GitHub API rate limit exceeded. Rate limit will reset at ${resetDate}.`,
+          },
+          { status: 429 }
+        );
+      }
+
+      // Handle authentication errors
       if (error.status === 401) {
         return NextResponse.json(
           {
-            error: "Default GitHub token is invalid or rate limited. Try again later.",
+            error: "Unable to access GitHub API. Try again later.",
           },
           { status: 401 }
         );
       }
+
       throw error;
     }
   } catch (error: any) {
@@ -36,4 +57,4 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

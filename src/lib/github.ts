@@ -25,12 +25,20 @@ export interface GistUpdateInput {
 // GitHub API client class
 export class GitHubClient {
   private octokit: Octokit;
+  private isUnauthenticated: boolean;
 
-  constructor(token: string) {
-    this.octokit = new Octokit({ auth: token });
+  constructor(token?: string) {
+    // Support for unauthenticated requests (with rate limits)
+    if (!token) {
+      this.octokit = new Octokit();
+      this.isUnauthenticated = true;
+    } else {
+      this.octokit = new Octokit({ auth: token });
+      this.isUnauthenticated = false;
+    }
   }
 
-  // List all gists for the authenticated user
+  // List all gists for the authenticated user or public gists if unauthenticated
   async listGists(per_page = 10, page = 1) {
     try {
       const response = await this.octokit.request("GET /gists", {
@@ -40,6 +48,20 @@ export class GitHubClient {
       return response.data;
     } catch (error) {
       console.error("Error listing gists:", error);
+      throw error;
+    }
+  }
+
+  // List public gists without authentication
+  async listPublicGists(per_page = 10, page = 1) {
+    try {
+      const response = await this.octokit.request("GET /gists/public", {
+        per_page,
+        page,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error listing public gists:", error);
       throw error;
     }
   }
@@ -154,11 +176,15 @@ export class GitHubClient {
       throw error;
     }
   }
+
+  // Check if client is authenticated
+  isAuthenticated() {
+    return !this.isUnauthenticated;
+  }
 }
 
 // Create a GitHub client instance with a token
 export function createGitHubClient(token?: string) {
-  // Use the provided token or fall back to the default token
-  const authToken = token || "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";
-  return new GitHubClient(authToken);
+  // Remove the hardcoded token for security reasons
+  return new GitHubClient(token);
 }
